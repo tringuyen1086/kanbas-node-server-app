@@ -1,12 +1,12 @@
 {
-  "type": "module", 
+  "type": "module",
   "name": "kanbas-node-server-app",
   "version": "1.0.0",
   "description": "Node.js HTTP Web server for the Kanbas application",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node App.js"
+    "start": "node App.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -29,6 +29,7 @@
   },
   "homepage": "https://github.com/tringuyen1086/kanbas-node-server-app#readme",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.21.1"
   }
 }

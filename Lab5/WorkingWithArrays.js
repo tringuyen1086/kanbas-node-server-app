@@ -53,6 +53,9 @@ export default function WorkingWithArrays(app) {
         const { id } = req.params;
         const todoIndex = todos.findIndex((t) => t.id === parseInt(id));
         todos.splice(todoIndex, 1);
+        if (todoIndex !== -1) {
+            todos.splice(todoIndex, 1);
+        }
         res.json(todos);
     });
     
