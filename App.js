@@ -2,6 +2,7 @@ import express from 'express';
 import HelloRoutes from './Hello.js';
 import Lab5 from './Lab5/index.js';
 import UserRoutes from "./Kanbas/Users/routes.js"
+import CourseRoutes from './Kanbas/Courses/routes.js';
 import cors from "cors";
 import "dotenv/config";
 import session from "express-session"; // import new server session library
@@ -32,6 +33,7 @@ app.use(express.json());
 
 // Register routes
 UserRoutes(app);
+CourseRoutes(app);
 
 Lab5(app);
 HelloRoutes(app);
