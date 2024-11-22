@@ -2,82 +2,147 @@ import * as dao from "./dao.js";
 import * as courseDao from "../Courses/dao.js";
 import * as enrollmentsDao from "../Enrollments/dao.js";
 
-
-// let currentUser = null;
 export default function UserRoutes(app) {
-    const createUser = (req, res) => { };
-    const deleteUser = (req, res) => { };
-    const findAllUsers = (req, res) => { };
-    const findUserById = (req, res) => { };
-    const updateUser = (req, res) => { 
-        const userId = req.params.userId;
-        const userUpdates = req.body;
-        dao.updateUser(userId, userUpdates);
-        const currentUser = dao.findUserById(userId);
-        req.session["currentUser"] = currentUser;
-        res.json(currentUser); 
-    };
-    const signup = (req, res) => { 
-        const user = dao.findUserByUsername(req.body.username);
-        if (user) {
-            res.status(400).json(
-                { message: "Username already in use" });
-            return;
+    // Create a new user
+    const createUser = (req, res) => {
+        try {
+            const newUser = dao.createUser(req.body);
+            res.status(201).json(newUser);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
         }
-        const currentUser = dao.createUser(req.body);
-        req.session["currentUser"] = currentUser;
-        res.json(currentUser);
     };
-    const signin = async(req, res) => { 
-        const { username, password } = req.body;
-        const currentUser = dao.findUserByCredentials(username, password);
-        if (currentUser) {
-            req.session["currentUser"] = currentUser;
-        res.json(currentUser);
-        } else {
-            res.status(401).json({ message: "Unable to login. Try again later." });
+
+    // Delete a user
+    const deleteUser = (req, res) => {
+        try {
+            const userId = req.params.userId;
+            dao.deleteUser(userId);
+            res.sendStatus(204);
+        } catch (error) {
+            res.status(404).json({ error: "User not found" });
         }
-    
     };
-    const signout = (req, res) => { 
+
+    // Find all users
+    const findAllUsers = (req, res) => {
+        try {
+            const users = dao.findAllUsers();
+            res.json(users);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    };
+
+    // Find user by ID
+    const findUserById = (req, res) => {
+        try {
+            const userId = req.params.userId;
+            const user = dao.findUserById(userId);
+            if (!user) {
+                return res.status(404).json({ error: "User not found" });
+            }
+            res.json(user);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    };
+
+    // Update user details
+    const updateUser = (req, res) => {
+        try {
+            const userId = req.params.userId;
+            const userUpdates = req.body;
+            dao.updateUser(userId, userUpdates);
+            const updatedUser = dao.findUserById(userId);
+            req.session["currentUser"] = updatedUser;
+            res.json(updatedUser);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    };
+
+    // User signup
+    const signup = (req, res) => {
+        try {
+            const user = dao.findUserByUsername(req.body.username);
+            if (user) {
+                return res.status(400).json({ error: "Username already in use" });
+            }
+            const newUser = dao.createUser(req.body);
+            req.session["currentUser"] = newUser;
+            res.json(newUser);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    };
+
+    // User signin
+    const signin = (req, res) => {
+        try {
+            const { username, password } = req.body;
+            const user = dao.findUserByCredentials(username, password);
+            if (!user) {
+                return res.status(401).json({ error: "Invalid credentials" });
+            }
+            req.session["currentUser"] = user;
+            res.json(user);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    };
+
+    // User signout
+    const signout = (req, res) => {
         req.session.destroy();
         res.sendStatus(200);
     };
 
-    const profile = async(req, res) => { 
+    // Get current user's profile
+    const profile = (req, res) => {
         const currentUser = req.session["currentUser"];
         if (!currentUser) {
-            res.sendStatus(401);
-            return;
+            return res.status(401).json({ error: "Unauthorized" });
         }
-    
         res.json(currentUser);
     };
 
+    // Find courses for enrolled user
     const findCoursesForEnrolledUser = (req, res) => {
-        let { userId } = req.params;
-        if (userId === "current") {
+        try {
+            let { userId } = req.params;
+            if (userId === "current") {
+                const currentUser = req.session["currentUser"];
+                if (!currentUser) {
+                    return res.status(401).json({ error: "Unauthorized" });
+                }
+                userId = currentUser._id;
+            }
+            const courses = courseDao.findCoursesForEnrolledUser(userId);
+            res.json(courses);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    };
+
+    // Create a new course and enroll current user
+    const createCourse = (req, res) => {
+        try {
             const currentUser = req.session["currentUser"];
             if (!currentUser) {
-            res.sendStatus(401);
-            return;
+                return res.status(401).json({ error: "Unauthorized" });
             }
-            userId = currentUser._id;
+            const newCourse = courseDao.createCourse(req.body);
+            enrollmentsDao.enrollUserInCourse(currentUser._id, newCourse._id);
+            res.status(201).json(newCourse);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
         }
-        const courses = courseDao.findCoursesForEnrolledUser(userId);
-        res.json(courses);
     };
 
-    const createCourse = (req, res) => {
-        const currentUser = req.session["currentUser"];
-        const newCourse = courseDao.createCourse(req.body);
-        enrollmentsDao.enrollUserInCourse(currentUser._id, newCourse._id);
-        res.json(newCourse);
-    };
+    // Route Definitions
     app.post("/api/users/current/courses", createCourse);
-
     app.get("/api/users/:userId/courses", findCoursesForEnrolledUser);
-
     app.post("/api/users", createUser);
     app.get("/api/users", findAllUsers);
     app.get("/api/users/:userId", findUserById);
@@ -86,6 +151,5 @@ export default function UserRoutes(app) {
     app.post("/api/users/signup", signup);
     app.post("/api/users/signin", signin);
     app.post("/api/users/signout", signout);
-    app.post("/api/users/profile", profile);
+    app.get("/api/users/profile", profile);
 }
-
